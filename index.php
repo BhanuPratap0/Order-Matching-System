@@ -16,63 +16,70 @@ if (!$conn) {
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-    //transaction begins
-    $conn->begin_transaction();
+    try {
+        //transaction begins
+        $conn->begin_transaction();
 
-    //storing values coming through Form
-    $qty = $_POST['quantity'];
-    $price = $_POST['price'];
+        //storing values coming through Form
+        $qty = $_POST['quantity'];
+        $price = $_POST['price'];
 
-    //Getting row with the matching price
-    $sql = "SELECT * FROM `pending_order` WHERE `seller_price` = $price";
-    $result = $conn->query($sql);
+        //Getting row with the matching price
+        $sql = "SELECT * FROM `pending_order` WHERE `seller_price` = $price";
+        $result = $conn->query($sql);
 
-    $row = $result->fetch_assoc();
+        $row = $result->fetch_assoc();
 
-    //Working on the query on the basis of different conditions
-    if ($row['seller_qty'] == $qty) {
-        //updating pending_order table
-        $sql_remove_value = "UPDATE pending_order SET seller_qty = 0  WHERE seller_price = $price";
-        $conn->query($sql_remove_value);
+        //Working on the query on the basis of different conditions
+        if ($row['seller_qty'] == $qty) {
+            //updating pending_order table
+            $sql_remove_value = "UPDATE pending_order SET seller_qty = 0  WHERE seller_price = $price";
+            $conn->query($sql_remove_value);
 
-        //updating completed_order table
-        $insert_order = "INSERT INTO `completed_order`(`price`, `qty`) VALUES ($price, $qty)";
-        $insert_result = $conn->query($insert_order);
-        echo "<script type='text/javascript'>alert('Order Completed!');</script>";
-    } else if ($row['seller_qty'] > $qty) {
-        //updating pending_order table
-        $update_sql = "UPDATE pending_order SET seller_qty = seller_qty - $qty  WHERE seller_price = $price";
-        $update_result = $conn->query($update_sql);
+            //updating completed_order table
+            $insert_order = "INSERT INTO `completed_order`(`price`, `qty`) VALUES ($price, $qty)";
+            $insert_result = $conn->query($insert_order);
+            echo "<script type='text/javascript'>alert('Order Completed!');</script>";
+        } else if ($row['seller_qty'] > $qty) {
+            //updating pending_order table
+            $update_sql = "UPDATE pending_order SET seller_qty = seller_qty - $qty  WHERE seller_price = $price";
+            $update_result = $conn->query($update_sql);
 
-        //updating completed_order table
-        $insert_order = "INSERT INTO `completed_order`(`price`, `qty`) VALUES ($price, $qty)";
-        $insert_result = $conn->query($insert_order);
-        echo "<script type='text/javascript'>alert('Order Completed!');</script>";
-    } else {
-        $qty = $qty - $row['seller_qty'];
-        //updating pending_order table
-        $update_sql = "UPDATE pending_order SET seller_qty = 0  WHERE seller_price = $price";
-        $update_result = $conn->query($update_sql);
-
-        //inserting remaining quantity in pending_order table
-        $insert_pending_order = "INSERT INTO `pending_order`(`buy_price`, `buy_qty`) VALUES ($price, $qty)";
-        $insert_result = $conn->query($insert_pending_order);
-
-
-        //updating completed_order table
-        $insert_completed_order = "INSERT INTO `completed_order`(`price`, `qty`) VALUES ($price, $qty)";
-        $insert_result = $conn->query($insert_completed_order);
-
-        //showing the alert according to quantity remaining
-        if ($qty == 0) {
-            echo "<script type='text/javascript'>alert('Out of stock! Order in Pending State!');</script>";
+            //updating completed_order table
+            $insert_order = "INSERT INTO `completed_order`(`price`, `qty`) VALUES ($price, $qty)";
+            $insert_result = $conn->query($insert_order);
+            echo "<script type='text/javascript'>alert('Order Completed!');</script>";
         } else {
-            echo "<script type='text/javascript'>alert('$qty order places, rest in pending state due to OUT of Stock');</script>";
-        }
-    }
+            $qty = $qty - $row['seller_qty'];
+            //updating pending_order table
+            $update_sql = "UPDATE pending_order SET seller_qty = 0  WHERE seller_price = $price";
+            $update_result = $conn->query($update_sql);
 
-    //commiting transaction
-    $conn->commit();
+            //inserting remaining quantity in pending_order table
+            $insert_pending_order = "INSERT INTO `pending_order`(`buy_price`, `buy_qty`) VALUES ($price, $qty)";
+            $insert_result = $conn->query($insert_pending_order);
+
+
+            //updating completed_order table
+            $insert_completed_order = "INSERT INTO `completed_order`(`price`, `qty`) VALUES ($price, $qty)";
+            $insert_result = $conn->query($insert_completed_order);
+
+            //showing the alert according to quantity remaining
+            if ($qty == 0) {
+                echo "<script type='text/javascript'>alert('Out of stock! Order in Pending State!');</script>";
+            } else {
+                echo "<script type='text/javascript'>alert('$qty order places, rest in pending state due to OUT of Stock');</script>";
+            }
+        }
+
+        //commiting transaction
+        $conn->commit();
+        echo "<script type='text/javascript'>window.location.href = 'index.php';</script>";
+    } catch (Exception $e) {
+        // Roll back transaction in case of error
+        $conn->rollback();
+        echo "Transaction failed: " . $e->getMessage();
+    }
 }
 
 ?>
@@ -115,11 +122,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <form action="index.php" method="post">
             <div class="mb-3">
                 <label for="exampleInputPrice" class="form-label">Price</label>
-                <input type="number" name="price" class="form-control" id="exampleInputPrice">
+                <input type="number" name="price" class="form-control" min="0" id="exampleInputPrice">
             </div>
             <div class="mb-3">
                 <label for="exampleInputQuantity" class="form-label">Quantity</label>
-                <input type="number" name="quantity" class="form-control" id="exampleInputQuantity">
+                <input type="number" name="quantity" class="form-control" min="0" id="exampleInputQuantity">
             </div>
             <button type="submit" class="btn btn-primary">Submit</button>
         </form>
