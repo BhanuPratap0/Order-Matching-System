@@ -14,62 +14,64 @@ if (!$conn) {
     // echo "Connection was successful!<br/>";
 }
 
-$sql = 'SELECT * FROM `pending_order`';
-$result = $conn->query($sql);
-
-// Initialize an array to hold the data
-$data = array();
-if ($result->num_rows > 0) {
-    // Fetch all rows as an associative array
-    while ($row = $result->fetch_assoc()) {
-        $data[] = $row;
-    }
-} else {
-    echo "0 results";
-}
-
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
+    //transaction begins
     $conn->begin_transaction();
+
+    //storing values coming through Form
     $qty = $_POST['quantity'];
     $price = $_POST['price'];
 
+    //Getting row with the matching price
     $sql = "SELECT * FROM `pending_order` WHERE `seller_price` = $price";
     $result = $conn->query($sql);
-    $row = $result->fetch_assoc();
-    if ($row['seller_qty'] == $qty) {
 
+    $row = $result->fetch_assoc();
+
+    //Working on the query on the basis of different conditions
+    if ($row['seller_qty'] == $qty) {
+        //updating pending_order table
         $sql_remove_value = "UPDATE pending_order SET seller_qty = 0  WHERE seller_price = $price";
         $conn->query($sql_remove_value);
 
+        //updating completed_order table
         $insert_order = "INSERT INTO `completed_order`(`price`, `qty`) VALUES ($price, $qty)";
         $insert_result = $conn->query($insert_order);
         echo "<script type='text/javascript'>alert('Order Completed!');</script>";
     } else if ($row['seller_qty'] > $qty) {
+        //updating pending_order table
         $update_sql = "UPDATE pending_order SET seller_qty = seller_qty - $qty  WHERE seller_price = $price";
         $update_result = $conn->query($update_sql);
 
+        //updating completed_order table
         $insert_order = "INSERT INTO `completed_order`(`price`, `qty`) VALUES ($price, $qty)";
         $insert_result = $conn->query($insert_order);
         echo "<script type='text/javascript'>alert('Order Completed!');</script>";
     } else {
         $qty = $qty - $row['seller_qty'];
-
+        //updating pending_order table
         $update_sql = "UPDATE pending_order SET seller_qty = 0  WHERE seller_price = $price";
         $update_result = $conn->query($update_sql);
 
-        $insert_order = "INSERT INTO `pending_order`(`buy_price`, `buy_qty`) VALUES ($price, $qty)";
-        $insert_result = $conn->query($insert_order);
+        //inserting remaining quantity in pending_order table
+        $insert_pending_order = "INSERT INTO `pending_order`(`buy_price`, `buy_qty`) VALUES ($price, $qty)";
+        $insert_result = $conn->query($insert_pending_order);
 
-        $insert_order = "INSERT INTO `completed_order`(`price`, `qty`) VALUES ($price, $qty)";
-        $insert_result = $conn->query($insert_order);
-        if($qty==0) {
+
+        //updating completed_order table
+        $insert_completed_order = "INSERT INTO `completed_order`(`price`, `qty`) VALUES ($price, $qty)";
+        $insert_result = $conn->query($insert_completed_order);
+
+        //showing the alert according to quantity remaining
+        if ($qty == 0) {
             echo "<script type='text/javascript'>alert('Out of stock! Order in Pending State!');</script>";
         } else {
             echo "<script type='text/javascript'>alert('$qty order places, rest in pending state due to OUT of Stock');</script>";
         }
     }
 
+    //commiting transaction
     $conn->commit();
 }
 
@@ -81,7 +83,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Bootstrap demo</title>
+    <title>Order Matching System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
 
 
@@ -107,6 +109,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <body>
     <div class="container form-container">
+        <center>
+            <h1>Order Matching System</h1>
+        </center>
         <form action="index.php" method="post">
             <div class="mb-3">
                 <label for="exampleInputPrice" class="form-label">Price</label>
