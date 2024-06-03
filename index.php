@@ -30,48 +30,54 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $row = $result->fetch_assoc();
 
-        //Working on the query on the basis of different conditions
-        if ($row['seller_qty'] == $qty) {
-            //updating pending_order table
-            $sql_remove_value = "UPDATE pending_order SET seller_qty = 0  WHERE seller_price = $price";
-            $conn->query($sql_remove_value);
+        if ($row != null) {
 
-            //updating completed_order table
-            $insert_order = "INSERT INTO `completed_order`(`price`, `qty`) VALUES ($price, $qty)";
-            $insert_result = $conn->query($insert_order);
-            echo "<script type='text/javascript'>alert('Order Completed!');</script>";
-        } else if ($row['seller_qty'] > $qty) {
-            //updating pending_order table
-            $update_sql = "UPDATE pending_order SET seller_qty = seller_qty - $qty  WHERE seller_price = $price";
-            $update_result = $conn->query($update_sql);
+            //Working on the query on the basis of different conditions
+            if ($row['seller_qty'] == $qty) {
+                //updating pending_order table
+                $sql_remove_value = "UPDATE pending_order SET seller_qty = 0  WHERE seller_price = $price";
+                $conn->query($sql_remove_value);
 
-            //updating completed_order table
-            $insert_order = "INSERT INTO `completed_order`(`price`, `qty`) VALUES ($price, $qty)";
-            $insert_result = $conn->query($insert_order);
-            echo "<script type='text/javascript'>alert('Order Completed!');</script>";
+                //updating completed_order table
+                $insert_order = "INSERT INTO `completed_order`(`price`, `qty`) VALUES ($price, $qty)";
+                $insert_result = $conn->query($insert_order);
+                echo "<script type='text/javascript'>alert('Order Completed!');</script>";
+            } else if ($row['seller_qty'] > $qty) {
+                //updating pending_order table
+                $update_sql = "UPDATE pending_order SET seller_qty = seller_qty - $qty  WHERE seller_price = $price";
+                $update_result = $conn->query($update_sql);
+
+                //updating completed_order table
+                $insert_order = "INSERT INTO `completed_order`(`price`, `qty`) VALUES ($price, $qty)";
+                $insert_result = $conn->query($insert_order);
+                echo "<script type='text/javascript'>alert('Order Completed!');</script>";
+            } else {
+                $qty = $qty - $row['seller_qty'];
+                //updating pending_order table
+                $update_sql = "UPDATE pending_order SET seller_qty = 0  WHERE seller_price = $price";
+                $update_result = $conn->query($update_sql);
+
+                //inserting remaining quantity in pending_order table
+                $insert_pending_order = "INSERT INTO `pending_order`(`buy_price`, `buy_qty`) VALUES ($price, $qty)";
+                $insert_result = $conn->query($insert_pending_order);
+
+
+                //updating completed_order table
+                $insert_completed_order = "INSERT INTO `completed_order`(`price`, `qty`) VALUES ($price, $qty)";
+                $insert_result = $conn->query($insert_completed_order);
+
+                //showing the alert according to quantity remaining
+                if ($qty == 0) {
+                    echo "<script type='text/javascript'>alert('Out of stock! Order in Pending State!');</script>";
+                } else {
+                    echo "<script type='text/javascript'>alert('$qty order places, rest in pending state due to OUT of Stock');</script>";
+                }
+            }
         } else {
-            $qty = $qty - $row['seller_qty'];
-            //updating pending_order table
-            $update_sql = "UPDATE pending_order SET seller_qty = 0  WHERE seller_price = $price";
-            $update_result = $conn->query($update_sql);
-
-            //inserting remaining quantity in pending_order table
             $insert_pending_order = "INSERT INTO `pending_order`(`buy_price`, `buy_qty`) VALUES ($price, $qty)";
             $insert_result = $conn->query($insert_pending_order);
-
-
-            //updating completed_order table
-            $insert_completed_order = "INSERT INTO `completed_order`(`price`, `qty`) VALUES ($price, $qty)";
-            $insert_result = $conn->query($insert_completed_order);
-
-            //showing the alert according to quantity remaining
-            if ($qty == 0) {
-                echo "<script type='text/javascript'>alert('Out of stock! Order in Pending State!');</script>";
-            } else {
-                echo "<script type='text/javascript'>alert('$qty order places, rest in pending state due to OUT of Stock');</script>";
-            }
+            echo "<script type='text/javascript'>alert('No Stock available at this price at present, Order in pending orders.');</script>";
         }
-
         //commiting transaction
         $conn->commit();
         echo "<script type='text/javascript'>window.location.href = 'index.php';</script>";
@@ -200,14 +206,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
 
     </div>
-
-
-
-
-
-
-
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 </body>
 
